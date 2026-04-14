@@ -6,9 +6,9 @@ on:
       - main
 
 jobs:
-  variables:
-    GIT_SUBMODULE_STRATEGY: recursive
   build:
+    variables:
+      GIT_SUBMODULE_STRATEGY: recursive
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
