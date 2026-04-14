@@ -1,14 +1,13 @@
 name: 'C++ CI'
 
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
-
 on:
   push:
     branches:
       - main
 
 jobs:
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
   build:
     runs-on: ubuntu-latest
     steps:
