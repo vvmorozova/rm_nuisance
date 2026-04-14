@@ -10,20 +10,29 @@ set(TEST_DIR "./test/")
 file(GLOB_RECURSE SRC_FILES "${SRC_DIR}/*.cpp")
 file(GLOB_RECURSE TEST_FILES "${TEST_DIR}/*.cpp")
 
-# main exe
-add_executable(${PROJECT_NAME} ${SRC_FILES})
-target_include_directories(${PROJECT_NAME} PRIVATE ${INC_DIR})
-set_target_properties(${PROJECT_NAME} PROPERTIES
+# libarary
+list(FILTER SRC_FILES EXCLUDE REGEX ".*/main\\.cpp$")
+add_library(${PROJECT_NAME}_lib STATIC ${SRC_FILES})
+target_include_directories(${PROJECT_NAME}_lib PUBLIC ${INC_DIR})
+set_target_properties(${PROJECT_NAME}_lib PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED ON
 )
 if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+    target_compile_options(${PROJECT_NAME}_lib PRIVATE /W4)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic -Werror -g)
+    target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -Wextra -pedantic -Werror -g)
 endif()
 
-# tests
+# exe
+add_executable(${PROJECT_NAME} ${SRC_DIR}/main.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_lib)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED ON
+)
+
+# gtest
 set(GTEST_DIR "${TEST_DIR}/googletest")
 add_subdirectory(${GTEST_DIR} ${CMAKE_BINARY_DIR}/googletest EXCLUDE_FROM_ALL)
 enable_testing()
@@ -33,7 +42,11 @@ target_include_directories(${PROJECT_NAME}_tests PRIVATE
     ${INC_DIR}
     ${GTEST_DIR}/googletest/include
 )
-target_link_libraries(${PROJECT_NAME}_tests PRIVATE gtest gtest_main)
+target_link_libraries(${PROJECT_NAME}_tests PRIVATE
+    ${PROJECT_NAME}_lib 
+    gtest
+    gtest_main
+)
 set_target_properties(${PROJECT_NAME}_tests PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED ON

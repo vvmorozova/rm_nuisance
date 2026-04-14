@@ -13,9 +13,10 @@ jobs:
         with:
           submodules: true
       - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
-      - run: cmake . -DPATCH_VERSION=${{ github.run_number }} -DWITH_BOOST_TEST=ON
-      - run: cmake --build .
-      - run: cmake --build . --target package
+      - run: mkdir build
+      - run: cmake -DPATCH_VERSION=${{ github.run_number }} -S . -B build
+      - run: cmake --build build 
+      - run: cmake --build build --target package
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -33,6 +34,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./rm_nuisance-0.0.${{ github.run_number }}-Linux.deb
-          asset_name: m_nuisance-0.0.${{ github.run_number }}-Linux.deb
+          asset_path: ./build/rm_nuisance-0.0.${{ github.run_number }}-Linux.deb
+          asset_name: rm_nuisance-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package

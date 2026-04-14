@@ -18,7 +18,7 @@ nuisance_type cmd_args_parcer::parse_nuisance_type(const std::string& s) {
     return it->second;
 }
 
-config ArgsParser::parse(int argc, char* argv[]) {
+config cmd_args_parcer::parse(int argc, char* argv[]) {
     if (argc < 2)
         throw std::invalid_argument("Usage: rm_nuisance [options] input.wav");
 
