@@ -1,5 +1,8 @@
 name: 'C++ CI'
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 on:
   push:
     branches:
@@ -37,6 +40,3 @@ jobs:
           asset_path: ./rm_nuisance-0.0.${{ github.run_number }}-Linux.deb
           asset_name: rm_nuisance-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
-
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
