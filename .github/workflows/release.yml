@@ -13,8 +13,8 @@ jobs:
         with:
           submodules: true
       - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
-      - run: mkdir build && cd build && ls ..
-      - run: cmake -DPATCH_VERSION=${{ github.run_number }} -S ..
+      - run: mkdir build
+      - run: cmake -DPATCH_VERSION=${{ github.run_number }} -S .. -B build
       - run: cmake --build build
       - run: cmake --build build --target package
       - name: Create Release
@@ -37,3 +37,6 @@ jobs:
           asset_path: ./rm_nuisance-0.0.${{ github.run_number }}-Linux.deb
           asset_name: rm_nuisance-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
