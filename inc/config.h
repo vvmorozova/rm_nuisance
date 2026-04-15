@@ -1,13 +1,14 @@
 #pragma once
+
 #include <string>
 #include <vector>
 
 enum class nuisance_type {
-    Filler,
-    Noise,
-    Clicks,
-    Pauses,
-    Breath
+    filler,
+    noise,
+    clicks,
+    pauses,
+    breath
 };
 
 struct config {

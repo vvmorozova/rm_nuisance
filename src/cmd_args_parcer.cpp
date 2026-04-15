@@ -4,11 +4,11 @@
 #include <unordered_map>
 
 static const std::unordered_map<std::string, nuisance_type> kNuisanceMap = {
-    {"filler", nuisance_type::Filler},
-    {"noise",  nuisance_type::Noise},
-    {"clicks", nuisance_type::Clicks},
-    {"pauses", nuisance_type::Pauses},
-    {"breath", nuisance_type::Breath}
+    {"filler", nuisance_type::filler},
+    {"noise",  nuisance_type::noise},
+    {"clicks", nuisance_type::clicks},
+    {"pauses", nuisance_type::pauses},
+    {"breath", nuisance_type::breath}
 };
 
 nuisance_type cmd_args_parcer::parse_nuisance_type(const std::string& s) {

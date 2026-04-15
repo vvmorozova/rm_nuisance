@@ -58,7 +58,7 @@ TEST(ArgsParserTest, DisableSingleType) {
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
     ASSERT_EQ(cfg.disabled_types.size(), 1u);
-    EXPECT_EQ(cfg.disabled_types[0], nuisance_type::Noise);
+    EXPECT_EQ(cfg.disabled_types[0], nuisance_type::noise);
 }
 
 // FR-4.2.1: --disable-type several 
@@ -74,9 +74,9 @@ TEST(ArgsParserTest, DisableMultipleTypes) {
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
     ASSERT_EQ(cfg.disabled_types.size(), 3u);
-    EXPECT_EQ(cfg.disabled_types[0], nuisance_type::Filler);
-    EXPECT_EQ(cfg.disabled_types[1], nuisance_type::Clicks);
-    EXPECT_EQ(cfg.disabled_types[2], nuisance_type::Breath);
+    EXPECT_EQ(cfg.disabled_types[0], nuisance_type::filler);
+    EXPECT_EQ(cfg.disabled_types[1], nuisance_type::clicks);
+    EXPECT_EQ(cfg.disabled_types[2], nuisance_type::breath);
 }
 
 // FR-4.2.2: --config
@@ -117,7 +117,7 @@ TEST(ArgsParserTest, CombinedOptions) {
     EXPECT_EQ(cfg.config_file,    "cfg.json");
     EXPECT_TRUE(cfg.verbose);
     ASSERT_EQ(cfg.disabled_types.size(), 1u);
-    EXPECT_EQ(cfg.disabled_types[0], nuisance_type::Pauses);
+    EXPECT_EQ(cfg.disabled_types[0], nuisance_type::pauses);
 }
 
 // error test cases
