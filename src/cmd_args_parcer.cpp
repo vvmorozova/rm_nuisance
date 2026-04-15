@@ -27,7 +27,7 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
-        // --- Флаги без значения ---
+        // --- no val flag ---
         if (arg == "--verbose" || arg == "-v") {
             cfg.verbose = true;
             continue;
@@ -35,13 +35,13 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
 
         if (arg == "--pack") {
             cfg.pack_mode = true;
-            // все оставшиеся аргументы — входные файлы
+            // other args are input files
             while (++i < argc)
                 cfg.input_files.push_back(argv[i]);
             break;
         }
 
-        // --- Опции со значением ---
+        // options with value
         auto require_next = [&](const std::string& opt) -> std::string {
             if (i + 1 >= argc)
                 throw std::invalid_argument(opt + " requires an argument");
@@ -70,7 +70,7 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
             continue;
         }
 
-        // --- Позиционный аргумент (FR-4.1.1) ---
+        // position arg (FR-4.1.1)
         if (arg[0] != '-') {
             cfg.input_files.push_back(arg);
             continue;
