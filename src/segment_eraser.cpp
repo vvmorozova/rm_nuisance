@@ -1,0 +1,95 @@
+#include "segment_eraser.h"
+#include "utils.h"
+
+std::vector<float> segment_eraser::erase(const std::vector<float>& in, const std::vector<cut_range>& cuts)
+{
+    if (cuts.empty()) {
+        utils::log("eraser: nothing to cut, passing through");
+        return in;
+    }
+
+    utils::log("eraser: cutting " + std::to_string(cuts.size()) + " segment(s)");
+
+    const int fade_samples = static_cast<int>(FADE_DURATION_S * SAMPLE_RATE);
+
+    // build list of "keep" intervals (complement of cuts)
+    std::vector<std::pair<size_t,size_t>> keep_ranges;
+    size_t cursor = 0;
+
+    for (const auto& cut : cuts) {
+        size_t cut_start = clamp_sample(cut.start_s, in.size());
+        size_t cut_end   = clamp_sample(cut.end_s,   in.size());
+
+        if (cut_start > cursor) {
+            keep_ranges.push_back({cursor, cut_start});
+        }
+
+        cursor = cut_end;
+    }
+    if (cursor < in.size()) {
+        keep_ranges.push_back({cursor, in.size()});
+    }
+
+    // copy kept segments into output with per-segment fade
+    std::vector<float> out;
+    out.reserve(in.size());
+
+    for (size_t ki = 0; ki < keep_ranges.size(); ++ki) {
+        auto s = keep_ranges[ki].first;
+        auto e = keep_ranges[ki].second;
+        
+        if (s >= e) {
+            continue;
+        }
+
+        //size_t seg_len = e - s;
+        std::vector<float> seg(in.begin() + s, in.begin() + e);
+
+        // fade-in at the beginning of every keep segment (except the very first)
+        if (ki > 0) {
+            apply_fade_in(seg, fade_samples);
+        }
+
+        // fade-out at the end of every keep segment (except the very last)
+        if (ki + 1 < keep_ranges.size())
+        {
+            apply_fade_out(seg, fade_samples);
+        }
+
+        out.insert(out.end(), seg.begin(), seg.end());
+    }
+
+    float saved_s = static_cast<float>(in.size() - out.size()) / SAMPLE_RATE;
+    utils::log("eraser: removed " + std::to_string(saved_s) + " s of audio");
+    utils::log("eraser: output length " +
+        std::to_string(static_cast<float>(out.size()) / SAMPLE_RATE) + " s");
+
+    return out;
+}
+
+size_t segment_eraser::clamp_sample(float t, size_t max_sz) {
+    long long n = static_cast<long long>(t * SAMPLE_RATE);
+    if (n < 0) {
+        n = 0;
+    }
+    if (static_cast<size_t>(n) > max_sz)
+    {
+        n = static_cast<long long>(max_sz);
+    }
+    return static_cast<size_t>(n);
+}
+
+void segment_eraser::apply_fade_in(std::vector<float>& seg, int n) {
+    int len = std::min(n, static_cast<int>(seg.size()));
+    for (int i = 0; i < len; ++i) {
+        seg[i] *= static_cast<float>(i) / len;
+    }
+}
+
+void segment_eraser::apply_fade_out(std::vector<float>& seg, int n) {
+    int total = static_cast<int>(seg.size());
+    int start = std::max(0, total - n);
+    for (int i = start; i < total; ++i) {
+        seg[i] *= static_cast<float>(total - 1 - i) / n;
+    }
+}

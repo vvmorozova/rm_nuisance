@@ -12,5 +12,7 @@ public:
     ~whisper_analyzer() {
         if (ctx_) whisper_free(ctx_);
     }
+
+    // returns all transcribed segments with timestamps.
     std::vector<segment> analyze(const std::vector<float>& pcm);
 };

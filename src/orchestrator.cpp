@@ -3,8 +3,8 @@
 
 void orchestrator::run(const std::string& input_path, const std::string& output_path) {
     utils::log("rm nuisance pipeline started");
-    utils::log("Input  : " + input_path);
-    utils::log("Output : " + output_path);
+    utils::log("input  : " + input_path);
+    utils::log("output : " + output_path);
 
     // decode
     auto pcm = decoder_.decode(input_path);
@@ -17,7 +17,7 @@ void orchestrator::run(const std::string& input_path, const std::string& output_
 
     if (cuts.empty()) {
         utils::log("No garbage found – writing output unchanged");
-        encoder_.encode(pcm, input_path, output_path);
+        encoder_.encode(pcm, output_path);
         return;
     }
 
@@ -25,7 +25,7 @@ void orchestrator::run(const std::string& input_path, const std::string& output_
     auto clean_pcm = eraser_.erase(pcm, cuts);
 
     // encode output
-    encoder_.encode(clean_pcm, input_path, output_path);
+    encoder_.encode(clean_pcm, output_path);
 
     utils::log("Pipeline finished");
 }
