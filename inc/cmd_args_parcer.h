@@ -10,4 +10,5 @@ public:
 
 private:
     static nuisance_type parse_nuisance_type(const std::string& s);
+    static void validate_input_files_exist(const config& cfg);
 };

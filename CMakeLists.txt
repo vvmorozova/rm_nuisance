@@ -32,7 +32,7 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 )
 
 set_target_properties(${PROJECT_NAME}_lib PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
 
@@ -98,3 +98,19 @@ set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(CPACK_PACKAGE_CONTACT vasuyan4ik@gmail.com)
 
 include(CPack)
+
+# clean target
+
+add_custom_target(clean-all
+    COMMAND ${CMAKE_COMMAND} -E rm -rf
+        ${CMAKE_BINARY_DIR}/CMakeCache.txt
+        ${CMAKE_BINARY_DIR}/CMakeFiles
+        ${CMAKE_BINARY_DIR}/Makefile
+        ${CMAKE_BINARY_DIR}/cmake_install.cmake
+        ${CMAKE_BINARY_DIR}/CPackConfig.cmake
+        ${CMAKE_BINARY_DIR}/CPackSourceConfig.cmake
+        ${CMAKE_BINARY_DIR}/_CPack_Packages
+        ${CMAKE_BINARY_DIR}/googletest
+        ${CMAKE_BINARY_DIR}/whisper_build
+    COMMAND ${CMAKE_COMMAND} -E echo "Full clean done"
+)

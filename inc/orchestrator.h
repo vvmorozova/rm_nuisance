@@ -5,6 +5,7 @@
 #include "nuisance_detector.h"
 #include "segment_eraser.h"
 #include "encoder.h"
+#include "config.h"
 
 class orchestrator {
     decoder             decoder_;
@@ -14,7 +15,9 @@ class orchestrator {
     encoder             encoder_;
     config              cfg_;
 public:
-    explicit orchestrator(const config cfg) : whisper_(cfg.) {}
+    explicit orchestrator(const config cfg) : whisper_(cfg.model_path), cfg_(cfg){};
  
     void run();
+private:
+    std::string generate_output_name(std::string input);
 };

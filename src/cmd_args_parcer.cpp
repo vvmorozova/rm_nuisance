@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <iostream>
+#include <filesystem>
 
 static const std::unordered_map<std::string, nuisance_type> kNuisanceMap = {
     {"filler", nuisance_type::filler},
@@ -20,12 +22,9 @@ nuisance_type cmd_args_parcer::parse_nuisance_type(const std::string& s) {
 
 config cmd_args_parcer::parse(int argc, char* argv[]) {
     if (argc < 2)
-        throw std::invalid_argument("usage: rm_nuisance [options] input.wav");
+        throw std::invalid_argument("execute rm_nuisance -h to see help");
 
     config cfg;
-    // get model from config
-    // "models/ggml-base.bin"
-    // config by def is ~/.config/rm_nuisance/config
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -36,30 +35,29 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
             continue;
         }
 
-        if (arg == "--pack") {
-            cfg.pack_mode = true;
-            // other args are input files
-            while (++i < argc)
-                cfg.input_files.push_back(argv[i]);
-            break;
-        }
-
-        // options with value
-        auto require_next = [&](const std::string& opt) -> std::string {
-            if (i + 1 >= argc)
-                throw std::invalid_argument(opt + " requires an argument");
-            return argv[++i];
+        // options with multiple values
+        auto collect_values = [&](std::vector<std::string>& target) {
+            while (i + 1 < argc && argv[i + 1][0] != '-') {
+                target.push_back(argv[++i]);
+            }
         };
 
         if (arg == "-i" || arg == "--input") {
-            cfg.input_files.push_back(require_next(arg));
+            collect_values(cfg.input_files);
             continue;
         }
 
         if (arg == "-o" || arg == "--output") {
-            cfg.output_file = require_next(arg);
+            collect_values(cfg.output_files);
             continue;
         }
+
+        // options with single value
+        auto require_next = [&](const std::string& opt) -> std::string {
+            if (i + 1 >= argc || argv[i + 1][0] == '-')
+                throw std::invalid_argument(opt + " requires an argument");
+            return argv[++i];
+        };
 
         if (arg == "--config") {
             cfg.config_file = require_next(arg);
@@ -83,17 +81,47 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
             continue;
         }
 
-        // position arg (FR-4.1.1)
+        // positional args
         if (arg[0] != '-') {
             cfg.input_files.push_back(arg);
             continue;
         }
 
-        throw std::invalid_argument("Unknown option: " + arg);
+        throw std::invalid_argument("unknown option: " + arg);
     }
 
-    if (cfg.input_files.empty())
-        throw std::invalid_argument("No input files specified");
+    validate_input_files_exist(cfg);
+
+    int inSize = cfg.input_files.size();
+    int outSize = cfg.output_files.size();
+
+    if (inSize == 0)
+        throw std::invalid_argument("no input files specified");
+
+    if (inSize > 1 && outSize > 0 && outSize != inSize) {
+        std::cout << inSize << " " << outSize << std::endl;
+        throw std::invalid_argument("input and output files numbers don't match");
+    }
 
     return cfg;
+}
+
+void cmd_args_parcer::validate_input_files_exist(const config& cfg) {
+    std::vector<std::string> missing;
+
+    for (const auto& file : cfg.input_files) {
+        if (!std::filesystem::exists(file)) {
+            missing.push_back(file);
+        }
+    }
+
+    if (!missing.empty()) {
+        std::string msg = "input files do not exist: ";
+        for (size_t i = 0; i < missing.size(); ++i) {
+            msg += missing[i];
+            if (i + 1 < missing.size())
+                msg += ", ";
+        }
+        throw std::runtime_error(msg);
+    }
 }

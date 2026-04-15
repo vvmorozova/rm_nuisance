@@ -17,7 +17,7 @@ TEST(ArgsParserTest, SinglePositionalFile) {
 
     ASSERT_EQ(cfg.input_files.size(), 1u);
     EXPECT_EQ(cfg.input_files[0], "input.wav");
-    EXPECT_TRUE(cfg.output_file.empty());
+    EXPECT_TRUE(cfg.output_files.empty());
     EXPECT_FALSE(cfg.verbose);
     EXPECT_FALSE(cfg.pack_mode);
 }
@@ -32,7 +32,7 @@ TEST(ArgsParserTest, InputOutputFlags) {
 
     ASSERT_EQ(cfg.input_files.size(), 1u);
     EXPECT_EQ(cfg.input_files[0], "input.wav");
-    EXPECT_EQ(cfg.output_file, "output.wav");
+    EXPECT_EQ(cfg.output_files[0], "output.wav");
 }
 
 // FR-4.1.3: --pack with several files 
@@ -113,7 +113,7 @@ TEST(ArgsParserTest, CombinedOptions) {
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
     EXPECT_EQ(cfg.input_files[0], "input.wav");
-    EXPECT_EQ(cfg.output_file,    "output.wav");
+    EXPECT_EQ(cfg.output_files[0],    "output.wav");
     EXPECT_EQ(cfg.config_file,    "cfg.json");
     EXPECT_TRUE(cfg.verbose);
     ASSERT_EQ(cfg.disabled_types.size(), 1u);

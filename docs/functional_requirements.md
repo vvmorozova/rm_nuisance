@@ -104,7 +104,6 @@
 
 - FR-4.1.2: rm_nuisance -i input.wav -o output.wav - указание выходного файла
 
-- FR-4.1.3: rm_nuisance --pack *.wav - пакетная обработка
 
 
 
