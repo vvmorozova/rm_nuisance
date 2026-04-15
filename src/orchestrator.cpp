@@ -27,5 +27,5 @@ void orchestrator::run(const std::string& input_path, const std::string& output_
     // encode output
     encoder_.encode(clean_pcm, output_path);
 
-    utils::log("Pipeline finished");
+    utils::log("pipeline finished");
 }

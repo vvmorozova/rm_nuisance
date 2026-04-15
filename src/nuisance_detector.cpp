@@ -4,7 +4,7 @@
 
 std::vector<cut_range> nuisance_detector::detect(const std::vector<segment>& segs, size_t total_samples)
 {
-    utils::log("Detector: analysing " + std::to_string(segs.size()) + " segments …");
+    utils::log("detector: analysing " + std::to_string(segs.size()) + " segments …");
  
     std::vector<cut_range> cuts;
 
@@ -46,7 +46,7 @@ std::vector<cut_range> nuisance_detector::detect(const std::vector<segment>& seg
 
     // merge overlapping / adjacent ranges
     cuts = merge(cuts);
-    utils::log("Detector: " + std::to_string(cuts.size()) + " cut range(s) identified");
+    utils::log("detector: " + std::to_string(cuts.size()) + " cut range(s) identified");
     return cuts;
 }
 
