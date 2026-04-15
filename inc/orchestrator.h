@@ -12,8 +12,9 @@ class orchestrator {
     nuisance_detector   detector_;
     segment_eraser      eraser_;
     encoder             encoder_;
+    config              cfg_;
 public:
-    explicit orchestrator(const std::string& model_path) : whisper_(model_path) {}
+    explicit orchestrator(const config cfg) : whisper_(cfg.) {}
  
-    void run(const std::string& input_path, const std::string& output_path);
+    void run();
 };

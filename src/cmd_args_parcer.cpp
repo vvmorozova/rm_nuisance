@@ -20,9 +20,12 @@ nuisance_type cmd_args_parcer::parse_nuisance_type(const std::string& s) {
 
 config cmd_args_parcer::parse(int argc, char* argv[]) {
     if (argc < 2)
-        throw std::invalid_argument("Usage: rm_nuisance [options] input.wav");
+        throw std::invalid_argument("usage: rm_nuisance [options] input.wav");
 
     config cfg;
+    // get model from config
+    // "models/ggml-base.bin"
+    // config by def is ~/.config/rm_nuisance/config
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -67,6 +70,16 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
             cfg.disabled_types.push_back(
                 parse_nuisance_type(require_next(arg))
             );
+            continue;
+        }
+
+        if (arg == "-m") {
+            cfg.model_path = require_next(arg);
+            continue;
+        }
+
+        if (arg == "--help" || arg == "-h") {
+            cfg.call_help = true;
             continue;
         }
 
