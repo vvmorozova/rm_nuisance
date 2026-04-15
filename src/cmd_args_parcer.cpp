@@ -27,7 +27,7 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
-        // --- no val flag ---
+        // no val flag
         if (arg == "--verbose" || arg == "-v") {
             cfg.verbose = true;
             continue;
