@@ -18,7 +18,6 @@ TEST(ArgsParserTest, SinglePositionalFile) {
     ASSERT_EQ(cfg.input_files.size(), 1u);
     EXPECT_EQ(cfg.input_files[0], "input.wav");
     EXPECT_TRUE(cfg.output_files.empty());
-    EXPECT_FALSE(cfg.verbose);
     EXPECT_FALSE(cfg.pack_mode);
 }
 
@@ -95,8 +94,6 @@ TEST(ArgsParserTest, VerboseFlag) {
     std::vector<std::string> args = {"rm_nuisance", "--verbose", "input.wav"};
     auto argv = make_argv(args);
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
-
-    EXPECT_TRUE(cfg.verbose);
 }
 
 // several args
@@ -115,7 +112,6 @@ TEST(ArgsParserTest, CombinedOptions) {
     EXPECT_EQ(cfg.input_files[0], "input.wav");
     EXPECT_EQ(cfg.output_files[0],    "output.wav");
     EXPECT_EQ(cfg.config_file,    "cfg.json");
-    EXPECT_TRUE(cfg.verbose);
     ASSERT_EQ(cfg.disabled_types.size(), 1u);
     EXPECT_EQ(cfg.disabled_types[0], nuisance_type::pauses);
 }

@@ -26,8 +26,6 @@ void utils::usage(const char* prog) {
         << "  --disable-type [filler|noise|clicks|pauses|breath] disable processing types"
         << "               (default: none are disabled)\n"
         << "\n"
-        << "  --verbose    verbose processing output"
-        << "\n"
         << "examples:\n"
         << "  " << prog << " interview.mp3 interview_clean.mp3\n"
         << "  " << prog << " -m ggml-large-v3.bin lecture.wav lecture_clean.wav\n";

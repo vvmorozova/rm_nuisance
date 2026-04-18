@@ -1,6 +1,15 @@
 #include "nuisance_detector.h"
 #include "utils.h"
 #include "storage.h"
+/*
+enum class nuisance_type {
+    filler,
+    noise,
+    clicks,
+    pauses,
+    breath
+};
+*/
 
 std::vector<cut_range> nuisance_detector::detect(const std::vector<segment>& segs, size_t total_samples)
 {
@@ -33,7 +42,7 @@ std::vector<cut_range> nuisance_detector::detect(const std::vector<segment>& seg
     }
 
     // silence
-    if (!segs.empty()) {
+    if (!is_type_disabled(nuisance_type::pauses) && !segs.empty()) {
         float first_start = segs.front().start_s;
         if (first_start > MIN_SILENCE_S)
             cuts.push_back({0.3f, first_start - 0.15f});
@@ -50,35 +59,13 @@ std::vector<cut_range> nuisance_detector::detect(const std::vector<segment>& seg
     return cuts;
 }
 
-const std::vector<std::regex>& nuisance_detector::garbage_patterns() {
-    static std::vector<std::regex> pats = {
-        // Fillers / interjections: э-э-э, м-м-м, а-а-а, ну-у, хм, hmm, um, uh, …
-        std::regex(u8"^[эЭмМаАнНоО][\\-–—]?[эЭмМаАнНоО][\\-–—]?[эЭмМаАнНоО]?$",
-                    std::regex::icase | std::regex::ECMAScript),
-        std::regex(u8"^(хм|хмм|гм|эх|ой|ах|ах|ой|ну|вот|так|это|блин)$",
-                    std::regex::icase | std::regex::ECMAScript),
-        std::regex("^(um|uh|hmm|hm|ah|oh|er|err|ugh|phew|ew)$",
-                    std::regex::icase | std::regex::ECMAScript),
-        // Stuttering / repeated word start: "я я", "он он он"
-        std::regex(u8"^(\\w+)\\s+\\1(\\s+\\1)*$",
-                    std::regex::icase | std::regex::ECMAScript),
-        // Breath / lip smack markers that whisper sometimes outputs
-        std::regex("^\\[(breath|inhale|exhale|cough|smack|click|noise|music)\\]$",
-                    std::regex::icase | std::regex::ECMAScript),
-        // Very short single non-word tokens (1-2 chars, no Cyrillic letter word)
-        std::regex(u8"^[^а-яёА-ЯЁa-zA-Z]*$",
-                    std::regex::ECMAScript),
-    };
-    return pats;
-}
-
 bool nuisance_detector::is_garbage_text(const std::string& text) {
     if (text.empty()) return true;
 
     std::string t = trim(text);
     if (t.empty()) return true;
 
-    for (const auto& pat : garbage_patterns())
+    for (const auto& pat : pats_)
         if (std::regex_match(t, pat)) return true;
 
     return false;
@@ -116,4 +103,44 @@ std::vector<cut_range> nuisance_detector::merge(std::vector<cut_range> ranges) {
             out.push_back(ranges[i]);
     }
     return out;
+}
+
+bool nuisance_detector::is_type_disabled(nuisance_type type)
+{
+    return std::find(disable_types.begin(), disable_types.end(), type) != disable_types.end();
+}
+
+void nuisance_detector::build_patterns()
+{
+    pats_.clear();
+
+    if (!is_type_disabled(nuisance_type::filler)) {
+        pats_.emplace_back(
+            u8"^[эЭмМаАнНоО][\\-–—]?[эЭмМаАнНоО][\\-–—]?[эЭмМаАнНоО]?$",
+            std::regex::icase | std::regex::ECMAScript);
+        pats_.emplace_back(
+            u8"^(хм|хмм|гм|эх|ой|ах|ну|вот|так|это|блин)$",
+            std::regex::icase | std::regex::ECMAScript);
+        pats_.emplace_back(
+            "^(um|uh|hmm|hm|ah|oh|er|err|ugh|phew|ew)$",
+            std::regex::icase | std::regex::ECMAScript);
+    }
+
+    if (!is_type_disabled(nuisance_type::clicks)) {
+        pats_.emplace_back(
+            u8"^(\\w+)\\s+\\1(\\s+\\1)*$",
+            std::regex::icase | std::regex::ECMAScript);
+    }
+
+    if (!is_type_disabled(nuisance_type::noise)) {
+        pats_.emplace_back(
+            "^\\[(breath|inhale|exhale|cough|smack|click|noise|music)\\]$",
+            std::regex::icase | std::regex::ECMAScript);
+    }
+
+    if (!is_type_disabled(nuisance_type::breath)) {
+        pats_.emplace_back(
+            u8"^[^а-яёА-ЯЁa-zA-Z]*$",
+            std::regex::ECMAScript);
+    }
 }

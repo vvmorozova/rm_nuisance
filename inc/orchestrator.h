@@ -15,7 +15,7 @@ class orchestrator {
     encoder             encoder_;
     config              cfg_;
 public:
-    explicit orchestrator(const config cfg) : whisper_(cfg.model_path), cfg_(cfg){};
+    explicit orchestrator(const config cfg) : whisper_(cfg.model_path), detector_(cfg.disabled_types) , cfg_(cfg){};
  
     void run();
 private:
