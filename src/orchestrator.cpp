@@ -4,6 +4,7 @@
 void orchestrator::run() {
     int inSize = cfg_.input_files.size();
     int outSize = cfg_.output_files.size();
+
     // check if exist?
     for (int i = 0; i < inSize; i++) {
         if (inSize > 1) {

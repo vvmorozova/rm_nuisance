@@ -84,7 +84,7 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
     int inSize = cfg.input_files.size();
     int outSize = cfg.output_files.size();
 
-    if (inSize == 0)
+    if (inSize == 0 && cfg.call_help == false)
         throw std::invalid_argument("no input files specified");
 
     if (inSize > 1 && outSize > 0 && outSize != inSize) {
