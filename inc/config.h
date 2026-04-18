@@ -16,9 +16,7 @@ struct config {
     std::vector<std::string>    output_files;
     std::string                 config_file;
     std::string                 model_path = "models/ggml-base.bin";
-    std::string                 config_path = "~/.config/rm_nuisance/config";
     std::vector<nuisance_type>  disabled_types;
     bool                        pack_mode = false;
-    bool                        verbose   = false;
     bool                        call_help = false;
 };

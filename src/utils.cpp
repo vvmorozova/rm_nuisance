@@ -26,8 +26,6 @@ void utils::usage(const char* prog) {
         << "  --disable-type [filler|noise|clicks|pauses|breath] disable processing types"
         << "               (default: none are disabled)\n"
         << "\n"
-        << "  --config path/to/config path to config file"
-        << "\n"
         << "  --verbose    verbose processing output"
         << "\n"
         << "examples:\n"

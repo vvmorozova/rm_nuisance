@@ -29,12 +29,6 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
-        // no val flag
-        if (arg == "--verbose" || arg == "-v") {
-            cfg.verbose = true;
-            continue;
-        }
-
         // options with multiple values
         auto collect_values = [&](std::vector<std::string>& target) {
             while (i + 1 < argc && argv[i + 1][0] != '-') {
@@ -58,11 +52,6 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
                 throw std::invalid_argument(opt + " requires an argument");
             return argv[++i];
         };
-
-        if (arg == "--config") {
-            cfg.config_file = require_next(arg);
-            continue;
-        }
 
         if (arg == "--disable-type") {
             cfg.disabled_types.push_back(
