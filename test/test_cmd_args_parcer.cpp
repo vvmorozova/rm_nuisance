@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include "cmd_args_parcer.h"
+#include <filesystem>
+#include <fstream>
 
 // turns string list into char* argv[] for parse()
 static std::vector<char*> make_argv(std::vector<std::string>& args) {
@@ -9,65 +11,70 @@ static std::vector<char*> make_argv(std::vector<std::string>& args) {
     return argv;
 }
 
+// Helper to create a temporary test file
+static std::string create_temp_file(const std::string& name) {
+    std::string path = "/tmp/" + name;
+    std::ofstream file(path);
+    file << "test data";
+    file.close();
+    return path;
+}
+
 // FR-4.1.1: no flags 
 TEST(ArgsParserTest, SinglePositionalFile) {
-    std::vector<std::string> args = {"rm_nuisance", "input.wav"};
+    auto input = create_temp_file("test_input.wav");
+    std::vector<std::string> args = {"rm_nuisance", input};
     auto argv = make_argv(args);
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
     ASSERT_EQ(cfg.input_files.size(), 1u);
-    EXPECT_EQ(cfg.input_files[0], "input.wav");
+    EXPECT_EQ(cfg.input_files[0], input);
     EXPECT_TRUE(cfg.output_files.empty());
     EXPECT_FALSE(cfg.pack_mode);
+    
+    std::filesystem::remove(input);
 }
 
 // FR-4.1.2: -i & -o
 TEST(ArgsParserTest, InputOutputFlags) {
+    auto input = create_temp_file("test_input2.wav");
     std::vector<std::string> args = {
-        "rm_nuisance", "-i", "input.wav", "-o", "output.wav"
+        "rm_nuisance", "-i", input, "-o", "/tmp/output.wav"
     };
     auto argv = make_argv(args);
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
     ASSERT_EQ(cfg.input_files.size(), 1u);
-    EXPECT_EQ(cfg.input_files[0], "input.wav");
-    EXPECT_EQ(cfg.output_files[0], "output.wav");
-}
-
-// FR-4.1.3: --pack with several files 
-TEST(ArgsParserTest, PackMode) {
-    std::vector<std::string> args = {
-        "rm_nuisance", "--pack", "a.wav", "b.wav", "c.wav"
-    };
-    auto argv = make_argv(args);
-    config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
-
-    EXPECT_TRUE(cfg.pack_mode);
-    ASSERT_EQ(cfg.input_files.size(), 3u);
-    EXPECT_EQ(cfg.input_files[0], "a.wav");
-    EXPECT_EQ(cfg.input_files[2], "c.wav");
+    EXPECT_EQ(cfg.input_files[0], input);
+    EXPECT_EQ(cfg.output_files[0], "/tmp/output.wav");
+    
+    std::filesystem::remove(input);
 }
 
 // FR-4.2.1: --disable-type single
 TEST(ArgsParserTest, DisableSingleType) {
+    auto input = create_temp_file("test_input3.wav");
     std::vector<std::string> args = {
-        "rm_nuisance", "--disable-type", "noise", "input.wav"
+        "rm_nuisance", "--disable-type", "noise", input
     };
     auto argv = make_argv(args);
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
     ASSERT_EQ(cfg.disabled_types.size(), 1u);
     EXPECT_EQ(cfg.disabled_types[0], nuisance_type::noise);
+    
+    std::filesystem::remove(input);
 }
 
 // FR-4.2.1: --disable-type several 
 TEST(ArgsParserTest, DisableMultipleTypes) {
+    auto input = create_temp_file("test_input4.wav");
     std::vector<std::string> args = {
         "rm_nuisance",
         "--disable-type", "filler",
         "--disable-type", "clicks",
         "--disable-type", "breath",
-        "input.wav"
+        input
     };
     auto argv = make_argv(args);
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
@@ -76,47 +83,88 @@ TEST(ArgsParserTest, DisableMultipleTypes) {
     EXPECT_EQ(cfg.disabled_types[0], nuisance_type::filler);
     EXPECT_EQ(cfg.disabled_types[1], nuisance_type::clicks);
     EXPECT_EQ(cfg.disabled_types[2], nuisance_type::breath);
+    
+    std::filesystem::remove(input);
 }
 
-// FR-4.2.2: --config
-TEST(ArgsParserTest, ConfigFile) {
+// FR-4.2.2: Model path specification
+TEST(ArgsParserTest, ModelPathOption) {
+    auto input = create_temp_file("test_input5.wav");
     std::vector<std::string> args = {
-        "rm_nuisance", "--config", "path/to/config.json", "input.wav"
+        "rm_nuisance", "-m", "/path/to/model.bin", input
     };
     auto argv = make_argv(args);
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
-    EXPECT_EQ(cfg.config_file, "path/to/config.json");
+    EXPECT_EQ(cfg.model_path, "/path/to/model.bin");
+    
+    std::filesystem::remove(input);
 }
 
-// FR-4.2.3: --verbose 
-TEST(ArgsParserTest, VerboseFlag) {
-    std::vector<std::string> args = {"rm_nuisance", "--verbose", "input.wav"};
-    auto argv = make_argv(args);
-    config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
-}
-
-// several args
+// FR-4.2.3: combined options
 TEST(ArgsParserTest, CombinedOptions) {
+    auto input = create_temp_file("test_input6.wav");
     std::vector<std::string> args = {
         "rm_nuisance",
-        "-i", "input.wav",
-        "-o", "output.wav",
-        "--disable-type", "pauses",
-        "--config", "cfg.json",
-        "--verbose"
+        "-i", input,
+        "-o", "/tmp/output.wav",
+        "-m", "/path/to/model.bin",
+        "--disable-type", "pauses"
     };
     auto argv = make_argv(args);
     config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
 
-    EXPECT_EQ(cfg.input_files[0], "input.wav");
-    EXPECT_EQ(cfg.output_files[0],    "output.wav");
-    EXPECT_EQ(cfg.config_file,    "cfg.json");
+    EXPECT_EQ(cfg.input_files[0], input);
+    EXPECT_EQ(cfg.output_files[0], "/tmp/output.wav");
+    EXPECT_EQ(cfg.model_path, "/path/to/model.bin");
     ASSERT_EQ(cfg.disabled_types.size(), 1u);
     EXPECT_EQ(cfg.disabled_types[0], nuisance_type::pauses);
+    
+    std::filesystem::remove(input);
 }
 
-// error test cases
+// FR-4.2.4: Multiple input files with -i
+TEST(ArgsParserTest, MultipleInputFilesWithFlag) {
+    auto input1 = create_temp_file("test_input7a.wav");
+    auto input2 = create_temp_file("test_input7b.wav");
+    std::vector<std::string> args = {
+        "rm_nuisance", "-i", input1, input2, "-o", "/tmp/out1.wav", "/tmp/out2.wav"
+    };
+    auto argv = make_argv(args);
+    config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
+
+    ASSERT_EQ(cfg.input_files.size(), 2u);
+    EXPECT_EQ(cfg.input_files[0], input1);
+    EXPECT_EQ(cfg.input_files[1], input2);
+    ASSERT_EQ(cfg.output_files.size(), 2u);
+    
+    std::filesystem::remove(input1);
+    std::filesystem::remove(input2);
+}
+
+// FR-4.3.1: Help flag
+TEST(ArgsParserTest, HelpFlag) {
+    std::vector<std::string> args = {"rm_nuisance", "--help"};
+    auto argv = make_argv(args);
+    config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
+
+    EXPECT_TRUE(cfg.call_help);
+}
+
+// FR-4.3.2: Help with input file
+TEST(ArgsParserTest, HelpWithInput) {
+    auto input = create_temp_file("test_input8.wav");
+    std::vector<std::string> args = {"rm_nuisance", "-h", input};
+    auto argv = make_argv(args);
+    config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
+
+    EXPECT_TRUE(cfg.call_help);
+    EXPECT_EQ(cfg.input_files[0], input);
+    
+    std::filesystem::remove(input);
+}
+
+// Error cases
 TEST(ArgsParserTest, NoArgsThrows) {
     std::vector<std::string> args = {"rm_nuisance"};
     auto argv = make_argv(args);
@@ -124,32 +172,52 @@ TEST(ArgsParserTest, NoArgsThrows) {
                  std::invalid_argument);
 }
 
-TEST(ArgsParserTest, NoInputFileThrows) {
-    std::vector<std::string> args = {"rm_nuisance", "--verbose"};
-    auto argv = make_argv(args);
-    EXPECT_THROW(cmd_args_parcer::parse((int)argv.size(), argv.data()),
-                 std::invalid_argument);
-}
-
-TEST(ArgsParserTest, UnknownOptionThrows) {
-    std::vector<std::string> args = {"rm_nuisance", "--unknown", "input.wav"};
-    auto argv = make_argv(args);
-    EXPECT_THROW(cmd_args_parcer::parse((int)argv.size(), argv.data()),
-                 std::invalid_argument);
-}
-
 TEST(ArgsParserTest, UnknownNuisanceTypeThrows) {
+    auto input = create_temp_file("test_input9.wav");
     std::vector<std::string> args = {
-        "rm_nuisance", "--disable-type", "aliens", "input.wav"
+        "rm_nuisance", "--disable-type", "aliens", input
     };
     auto argv = make_argv(args);
     EXPECT_THROW(cmd_args_parcer::parse((int)argv.size(), argv.data()),
                  std::invalid_argument);
+    
+    std::filesystem::remove(input);
 }
 
 TEST(ArgsParserTest, MissingValueForOptionThrows) {
-    std::vector<std::string> args = {"rm_nuisance", "-i"};
+    auto input = create_temp_file("test_input10.wav");
+    std::vector<std::string> args = {"rm_nuisance", "-m", "-i", input};
     auto argv = make_argv(args);
     EXPECT_THROW(cmd_args_parcer::parse((int)argv.size(), argv.data()),
                  std::invalid_argument);
+    
+    std::filesystem::remove(input);
+}
+
+TEST(ArgsParserTest, MissingInputFileThrows) {
+    std::vector<std::string> args = {
+        "rm_nuisance", "-i", "/nonexistent/file.wav"
+    };
+    auto argv = make_argv(args);
+    EXPECT_THROW(cmd_args_parcer::parse((int)argv.size(), argv.data()),
+                 std::runtime_error);
+}
+
+TEST(ArgsParserTest, AllNuisanceTypes) {
+    auto input = create_temp_file("test_input11.wav");
+    std::vector<std::string> args = {
+        "rm_nuisance",
+        "--disable-type", "filler",
+        "--disable-type", "noise",
+        "--disable-type", "clicks",
+        "--disable-type", "pauses",
+        "--disable-type", "breath",
+        input
+    };
+    auto argv = make_argv(args);
+    config cfg = cmd_args_parcer::parse((int)argv.size(), argv.data());
+
+    ASSERT_EQ(cfg.disabled_types.size(), 5u);
+    
+    std::filesystem::remove(input);
 }

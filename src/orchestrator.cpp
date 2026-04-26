@@ -5,7 +5,6 @@ void orchestrator::run() {
     int inSize = cfg_.input_files.size();
     int outSize = cfg_.output_files.size();
 
-    // check if exist?
     for (int i = 0; i < inSize; i++) {
         if (inSize > 1) {
             std::string msg = "processing " + std::to_string(i + 1) + " of " + std::to_string(inSize) + " files";
@@ -14,7 +13,7 @@ void orchestrator::run() {
 
         utils::log("rm nuisance pipeline started");
         std::string input_path = cfg_.input_files[i];
-        std::string output_path = outSize > 0 ? cfg_.input_files[i] : generate_output_name(input_path);
+        std::string output_path = outSize > 0 ? cfg_.output_files[i] : generate_output_name(input_path);
         utils::log("input  : " + input_path);
         utils::log("output : " + output_path);
     
@@ -30,7 +29,7 @@ void orchestrator::run() {
         if (cuts.empty()) {
             utils::log("no nuisance found – writing output unchanged");
             encoder_.encode(pcm, output_path);
-            return;
+            continue;
         }
     
         // erase segments & fade

@@ -9,6 +9,9 @@ std::vector<float> segment_eraser::erase(const std::vector<float>& in, const std
     }
 
     utils::log("eraser: cutting " + std::to_string(cuts.size()) + " segment(s)");
+    for (size_t i = 0; i < cuts.size(); ++i) {
+        utils::log("eraser: cut " + std::to_string(i) + ": " + std::to_string(cuts[i].start_s) + " - " + std::to_string(cuts[i].end_s));
+    }
 
     const int fade_samples = static_cast<int>(FADE_DURATION_S * SAMPLE_RATE);
 
@@ -42,7 +45,6 @@ std::vector<float> segment_eraser::erase(const std::vector<float>& in, const std
             continue;
         }
 
-        //size_t seg_len = e - s;
         std::vector<float> seg(in.begin() + s, in.begin() + e);
 
         // fade-in at the beginning of every keep segment (except the very first)
