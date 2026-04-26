@@ -15,6 +15,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
       - run: mkdir build
       - run: git clone https://github.com/ggerganov/whisper.cpp external/whisper.cpp
+      - run: git clone https://github.com/mborgerding/kissfft external/kissfft
       - run: external/whisper.cpp/models/download-ggml-model.sh base
       - run: mkdir models
       - run: cp external/whisper.cpp/models/ggml-base.bin models/
