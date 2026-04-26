@@ -16,7 +16,7 @@ class nuisance_detector {
 
 public:
     // returns list of time ranges to cut
-    std::vector<cut_range> detect(const std::vector<segment>& segs, size_t total_samples);
+    std::vector<cut_range> detect(const std::vector<segment>& segs, size_t total_samples, const std::vector<float>& pcm);
 
     explicit nuisance_detector(const std::vector<nuisance_type> & cfg_disable_types)
     : disable_types(cfg_disable_types) {
@@ -45,4 +45,6 @@ private:
 
     bool is_type_disabled(nuisance_type);
     void build_patterns();
+    std::vector<cut_range> detect_silence_from_pcm(
+    const std::vector<float>& pcm, float silence_threshold, float min_silence_s, float keep_pad_s);
 };

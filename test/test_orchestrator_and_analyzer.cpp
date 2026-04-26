@@ -115,12 +115,13 @@ TEST(IntegrationTest, DetectorAndEraserTogether) {
         {3.0f, 3.5f, "world"}
     };
     
+    // create audio data
+    size_t total_samples = static_cast<size_t>(5.0f * SAMPLE_RATE);
+    std::vector<float> pcm(5 * SAMPLE_RATE, 0.5f);
+    
     // detect nuisance
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(5.0f * SAMPLE_RATE));
-    
-    // create audio data
-    std::vector<float> pcm(5 * SAMPLE_RATE, 0.5f);
+    auto cuts = detector.detect(segs, total_samples, pcm);
     
     // erase based on detected cuts
     segment_eraser eraser;
@@ -136,12 +137,14 @@ TEST(IntegrationTest, EmptyDetectionMeansNoCuts) {
         {1.5f, 2.0f, "world"}
     };
     
+    size_t total_samples = static_cast<size_t>(3.0f * SAMPLE_RATE);
+    std::vector<float> pcm(3 * SAMPLE_RATE, 0.5f);
+    
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(3.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
     
     // short pauses should not be detected
     if (cuts.empty()) {
-        std::vector<float> pcm(3 * SAMPLE_RATE, 0.5f);
         segment_eraser eraser;
         auto result = eraser.erase(pcm, cuts);
         
@@ -163,12 +166,14 @@ TEST(IntegrationTest, AllNuisanceTypesDisabled) {
         nuisance_type::breath
     };
     
+    size_t total_samples = static_cast<size_t>(7.0f * SAMPLE_RATE);
+    std::vector<float> pcm(7 * SAMPLE_RATE, 0.5f);
+    
     nuisance_detector detector(disabled);
-    auto cuts = detector.detect(segs, static_cast<size_t>(7.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
     
     // with all types disabled, only leading/trailing silence would be detected
     // and they're also disabled via pauses, so should be empty
-    std::vector<float> pcm(7 * SAMPLE_RATE, 0.5f);
     segment_eraser eraser;
     auto result = eraser.erase(pcm, cuts);
     
@@ -186,8 +191,11 @@ TEST(IntegrationTest, LongFileSplitIntoSegments) {
         });
     }
     
+    size_t total_samples = static_cast<size_t>(50.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+    
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(50.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
     
     EXPECT_GE(cuts.size(), 0u);
 }

@@ -13,8 +13,11 @@ TEST(NuisanceDetectorTest, DetectsLongPauseBetweenSegments) {
         {4.5f, 5.0f, "world"}
     };
 
+    size_t total_samples = static_cast<size_t>(6.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(6.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     ASSERT_EQ(cuts.size(), 1u);
     EXPECT_NEAR(cuts[0].start_s, 1.15f, 1e-3);
@@ -28,8 +31,11 @@ TEST(NuisanceDetectorTest, DetectsFillerWords) {
         {1.5f, 2.0f, "world"}
     };
 
+    size_t total_samples = static_cast<size_t>(3.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(3.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     EXPECT_GT(cuts.size(), 0u);
 }
@@ -40,9 +46,12 @@ TEST(NuisanceDetectorTest, IgnoresDisabledPauseType) {
         {5.0f, 6.0f, "world"}
     };
 
+    size_t total_samples = static_cast<size_t>(7.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     std::vector<nuisance_type> disabled = {nuisance_type::pauses};
     nuisance_detector detector(disabled);
-    auto cuts = detector.detect(segs, static_cast<size_t>(7.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     EXPECT_EQ(cuts.size(), 0u);
 }
@@ -52,8 +61,11 @@ TEST(NuisanceDetectorTest, DetectsLeadingSilence) {
         {3.0f, 4.0f, "hello"}
     };
 
+    size_t total_samples = static_cast<size_t>(5.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(5.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     ASSERT_GT(cuts.size(), 0u);
     EXPECT_LT(cuts[0].start_s, 1.0f);
@@ -64,8 +76,11 @@ TEST(NuisanceDetectorTest, DetectsTrailingSilence) {
         {0.5f, 1.0f, "hello"}
     };
 
+    size_t total_samples = static_cast<size_t>(5.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(5.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     ASSERT_GT(cuts.size(), 0u);
     EXPECT_GT(cuts.back().end_s, 3.0f);
@@ -77,8 +92,11 @@ TEST(NuisanceDetectorTest, IgnoresShortPauses) {
         {1.5f, 2.0f, "world"}
     };
 
+    size_t total_samples = static_cast<size_t>(3.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(3.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     EXPECT_EQ(cuts.size(), 0u);
 }
@@ -91,8 +109,11 @@ TEST(NuisanceDetectorTest, MergesOverlappingCuts) {
         {10.0f, 11.0f, "d"}
     };
 
+    size_t total_samples = static_cast<size_t>(12.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(12.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     EXPECT_GT(cuts.size(), 0u);
 }
@@ -100,8 +121,11 @@ TEST(NuisanceDetectorTest, MergesOverlappingCuts) {
 TEST(NuisanceDetectorTest, HandlesEmptySegments) {
     std::vector<segment> segs = {};
 
+    size_t total_samples = static_cast<size_t>(5.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(5.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     EXPECT_GE(cuts.size(), 0u);
 }
@@ -113,8 +137,11 @@ TEST(NuisanceDetectorTest, DetectsMultipleNuisanceTypes) {
         {5.5f, 6.0f, "world"}
     };
 
+    size_t total_samples = static_cast<size_t>(7.0f * SAMPLE_RATE);
+    std::vector<float> pcm(total_samples, 0.1f);
+
     nuisance_detector detector({});
-    auto cuts = detector.detect(segs, static_cast<size_t>(7.0f * SAMPLE_RATE));
+    auto cuts = detector.detect(segs, total_samples, pcm);
 
     EXPECT_GT(cuts.size(), 0u);
 }

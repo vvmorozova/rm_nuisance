@@ -24,7 +24,7 @@ void orchestrator::run() {
         auto segments = whisper_.analyze(pcm);
     
         // detect nuisance ranges
-        auto cuts = detector_.detect(segments, pcm.size());
+        auto cuts = detector_.detect(segments, pcm.size(), pcm);
     
         if (cuts.empty()) {
             utils::log("no nuisance found – writing output unchanged");
