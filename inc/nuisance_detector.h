@@ -47,4 +47,11 @@ private:
     void build_patterns();
     std::vector<cut_range> detect_silence_from_pcm(
     const std::vector<float>& pcm, float silence_threshold, float min_silence_s, float keep_pad_s);
+    std::vector<cut_range> detect_clicks_from_pcm(const std::vector<float>& pcm,
+        float peak_threshold = 0.85f,   // peak amplitude
+        float context_s      = 0.05f);  // cut around click
+
+    std::vector<cut_range> detect_rustle_from_pcm(const std::vector<float>& pcm,
+        float energy_threshold = 0.1f,
+        float min_duration_s   = 0.3f);  // min rustle len
 };

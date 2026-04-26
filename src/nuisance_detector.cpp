@@ -2,6 +2,11 @@
 #include "utils.h"
 #include "storage.h"
 #include <cmath>
+#include "kiss_fft.h"
+
+extern "C" {
+    #include "kiss_fft.h"
+}
 
 // silence_threshold used for pcm-based silence detection
 static constexpr float SILENCE_THRESHOLD = 0.01f;
@@ -52,6 +57,23 @@ std::vector<cut_range> nuisance_detector::detect(
         for (const auto& r : silence_cuts)
             details.emplace_back(nuisance_type_name(nuisance_type::pauses), r, "pcm silence");
         cuts.insert(cuts.end(), silence_cuts.begin(), silence_cuts.end());
+    }
+
+    // detect clicks (sharp amplitude spikes)
+    if (!is_type_disabled(nuisance_type::clicks)) {
+        auto click_cuts = detect_clicks_from_pcm(pcm);
+        for (const auto& r : click_cuts)
+            details.emplace_back(nuisance_type_name(nuisance_type::clicks), r, "pcm click");
+        cuts.insert(cuts.end(), click_cuts.begin(), click_cuts.end());
+    }
+
+    // detect mechanical noise / rustle (high-frequency energy bursts)
+    if (!is_type_disabled(nuisance_type::noise)) {
+        // ratio_threshold=0.4f:
+        auto rustle_cuts = detect_rustle_from_pcm(pcm, 0.3f, 0.3f);
+        for (const auto& r : rustle_cuts)
+            details.emplace_back(nuisance_type_name(nuisance_type::noise), r, "pcm rustle");
+        cuts.insert(cuts.end(), rustle_cuts.begin(), rustle_cuts.end());
     }
 
     cuts = merge(cuts);
@@ -132,7 +154,7 @@ std::vector<cut_range> nuisance_detector::detect_silence_from_pcm(
     return cuts;
 }
 
-// ─── garbage text classification ─────────────────────────────────────────────
+//  garbage text classification 
 
 bool nuisance_detector::is_garbage_text(const std::string& text, std::string& out_type_name)
 {
@@ -155,11 +177,12 @@ bool nuisance_detector::is_garbage_text(const std::string& text, std::string& ou
             return true;
         }
     }
+    utils::log("  [not matched] '" + t + "' (original: '" + text + "')");
 
     return false;
 }
 
-// ─── pattern building ─────────────────────────────────────────────────────────
+// pattern building 
 
 void nuisance_detector::build_patterns()
 {
@@ -219,7 +242,7 @@ void nuisance_detector::build_patterns()
     }
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
+//  helpers 
 
 cut_range nuisance_detector::padded(float s, float e)
 {
@@ -281,4 +304,116 @@ std::vector<cut_range> nuisance_detector::merge(std::vector<cut_range> ranges)
 bool nuisance_detector::is_type_disabled(nuisance_type type)
 {
     return std::find(disable_types.begin(), disable_types.end(), type) != disable_types.end();
+}
+
+std::vector<cut_range> nuisance_detector::detect_clicks_from_pcm(
+    const std::vector<float>& pcm,
+    float peak_threshold,
+    float context_s)
+{
+    const int context_samples = static_cast<int>(context_s * SAMPLE_RATE);
+    std::vector<cut_range> cuts;
+
+    for (size_t i = 1; i + 1 < pcm.size(); ++i) {
+        float val = std::abs(pcm[i]);
+        if (val < peak_threshold) continue;
+
+        // peak is higher that neighborn, it excludes loud sound
+        float prev_avg = std::abs(pcm[i-1]);
+        float next_avg = std::abs(pcm[i+1]);
+        float local_ctx = (prev_avg + next_avg) / 2.0f;
+
+        if (val > local_ctx * 3.0f) {
+            float s = std::max(0.0f,
+                static_cast<float>(static_cast<int>(i) - context_samples) / SAMPLE_RATE);
+            float e = std::min(static_cast<float>(pcm.size()) / SAMPLE_RATE,
+                static_cast<float>(static_cast<int>(i) + context_samples) / SAMPLE_RATE);
+            utils::log("detector: [click] @ " + ts(s) + " – " + ts(e) +
+                " peak=" + std::to_string(val));
+            cuts.push_back({s, e});
+            // let context_samples be firts to exclude doubles
+            i += context_samples;
+        }
+    }
+
+    return merge(cuts);
+}
+
+std::vector<cut_range> nuisance_detector::detect_rustle_from_pcm(
+    const std::vector<float>& pcm,
+    float ratio_threshold,
+    float min_duration_s)
+{
+    const int window_samples    = 512;   // must be power of 2 for kiss_fft
+    const int min_noisy_windows = static_cast<int>(min_duration_s * SAMPLE_RATE / window_samples);
+
+    // indexes freq bins for 16000 Gz and window 512 samples
+    // bin = freq * window_samples / sample_rate
+    // speech:      300-3000 Gz → bins 10-96
+    // rustle: 4000-8000 Gz → bins 128-256
+    const int lf_bin_start = 10,  lf_bin_end = 96;
+    const int hf_bin_start = 128, hf_bin_end = 256;
+
+    kiss_fft_cfg cfg = kiss_fft_alloc(window_samples, 0, nullptr, nullptr);
+    if (!cfg)
+        throw std::runtime_error("detector: kiss_fft_alloc failed");
+
+    std::vector<kiss_fft_cpx> in_buf(window_samples);
+    std::vector<kiss_fft_cpx> out_buf(window_samples);
+    std::vector<bool> is_noisy;
+
+    for (size_t i = 0; i + window_samples < pcm.size(); i += window_samples) {
+        // fill input buffer (kiss_fft works with complex numbers)
+        for (int j = 0; j < window_samples; ++j) {
+            // apply Hann window to reduce spectral leakage
+            float hann = 0.5f * (1.0f - std::cos(2.0f * M_PI * j / (window_samples - 1)));
+            in_buf[j].r = pcm[i + j] * hann;
+            in_buf[j].i = 0.0f;
+        }
+
+        kiss_fft(cfg, in_buf.data(), out_buf.data());
+
+        // calculate energy in low-frequency and high-frequency bands
+        float lf_energy = 0.0f;
+        for (int b = lf_bin_start; b <= lf_bin_end; ++b)
+            lf_energy += out_buf[b].r * out_buf[b].r + out_buf[b].i * out_buf[b].i;
+
+        float hf_energy = 0.0f;
+        for (int b = hf_bin_start; b <= hf_bin_end; ++b)
+            hf_energy += out_buf[b].r * out_buf[b].r + out_buf[b].i * out_buf[b].i;
+
+        float total = lf_energy + hf_energy;
+        float ratio = (total > 1e-6f) ? (hf_energy / total) : 0.0f;
+
+        is_noisy.push_back(ratio > ratio_threshold);
+    }
+
+    kiss_fft_free(cfg);
+
+    // collect continuous noisy segments
+    std::vector<cut_range> cuts;
+    int noisy_start = -1, noisy_count = 0;
+
+    for (size_t w = 0; w < is_noisy.size(); ++w) {
+        if (is_noisy[w]) {
+            if (noisy_start < 0) { noisy_start = static_cast<int>(w); noisy_count = 0; }
+            ++noisy_count;
+        } else {
+            if (noisy_start >= 0 && noisy_count >= min_noisy_windows) {
+                float s = static_cast<float>(noisy_start * window_samples) / SAMPLE_RATE;
+                float e = static_cast<float>(w * window_samples) / SAMPLE_RATE;
+                utils::log("detector: [rustle] " + ts(s) + " – " + ts(e));
+                cuts.push_back({s, e});
+            }
+            noisy_start = -1; noisy_count = 0;
+        }
+    }
+    // tail noisy segment
+    if (noisy_start >= 0 && noisy_count >= min_noisy_windows) {
+        float s = static_cast<float>(noisy_start * window_samples) / SAMPLE_RATE;
+        float e = static_cast<float>(pcm.size()) / SAMPLE_RATE;
+        cuts.push_back({s, e});
+    }
+
+    return merge(cuts);
 }
