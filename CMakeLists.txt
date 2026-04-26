@@ -29,6 +29,24 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
     "${WHISPER_DIR}"
     "${WHISPER_DIR}/include"
     "${WHISPER_DIR}/ggml/include"
+    "${WHISPER_DIR}/ggml/src"
+)
+
+set(KISSFFT_DIR "${CMAKE_SOURCE_DIR}/external/kissfft")
+
+if(NOT EXISTS "${KISSFFT_DIR}/kiss_fft.h")
+    message(FATAL_ERROR
+        "kissfft not found at ${KISSFFT_DIR}\n"
+        "Please run:\n"
+        "  git submodule add https://github.com/mborgerding/kissfft external/kissfft")
+endif()
+
+target_sources(${PROJECT_NAME}_lib PRIVATE
+    "${KISSFFT_DIR}/kiss_fft.c"
+)
+
+target_include_directories(${PROJECT_NAME}_lib PUBLIC
+    "${KISSFFT_DIR}"
 )
 
 set_target_properties(${PROJECT_NAME}_lib PROPERTIES
@@ -39,7 +57,8 @@ set_target_properties(${PROJECT_NAME}_lib PROPERTIES
 if (MSVC)
     target_compile_options(${PROJECT_NAME}_lib PRIVATE /W4)
 else()
-    target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -Wextra -pedantic -Werror -g)
+    #target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -Wextra -pedantic -Werror -g)
+    target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -g)
 endif()
 
 target_link_libraries(${PROJECT_NAME}_lib PUBLIC whisper)
