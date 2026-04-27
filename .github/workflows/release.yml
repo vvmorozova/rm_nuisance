@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - run: sudo apt-get update && sudo apt-get install libboost-test-dev -y
+      - run: sudo apt-get update && sudo apt-get install libboost-test-dev libboost-all-dev -y
       - run: mkdir build
       - run: git clone https://github.com/ggerganov/whisper.cpp external/whisper.cpp
       - run: external/whisper.cpp/models/download-ggml-model.sh base

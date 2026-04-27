@@ -14,26 +14,28 @@ option(WHISPER_OPENBLAS OFF)
 option(WHISPER_METAL OFF)
 
 set(WHISPER_DIR "${CMAKE_SOURCE_DIR}/external/whisper.cpp")
-
 if(NOT EXISTS "${WHISPER_DIR}/CMakeLists.txt")
-  message(FATAL_ERROR "whisper.cpp not found at ${WHISPER_DIR}")
+    message(FATAL_ERROR "whisper.cpp not found at ${WHISPER_DIR}")
 endif()
-
 add_subdirectory(${WHISPER_DIR} whisper_build EXCLUDE_FROM_ALL)
+
+# find boost with program_options component
+find_package(Boost REQUIRED COMPONENTS program_options)
 
 list(FILTER SRC_FILES EXCLUDE REGEX ".*/main\\.cpp$")
 
 add_library(${PROJECT_NAME}_lib STATIC ${SRC_FILES})
+
 target_include_directories(${PROJECT_NAME}_lib PUBLIC
     ${INC_DIR}
     "${WHISPER_DIR}"
     "${WHISPER_DIR}/include"
     "${WHISPER_DIR}/ggml/include"
     "${WHISPER_DIR}/ggml/src"
+    ${Boost_INCLUDE_DIRS}
 )
 
 set(KISSFFT_DIR "${CMAKE_SOURCE_DIR}/external/kissfft")
-
 if(NOT EXISTS "${KISSFFT_DIR}/kiss_fft.h")
     message(FATAL_ERROR
         "kissfft not found at ${KISSFFT_DIR}\n"
@@ -44,7 +46,6 @@ endif()
 target_sources(${PROJECT_NAME}_lib PRIVATE
     "${KISSFFT_DIR}/kiss_fft.c"
 )
-
 target_include_directories(${PROJECT_NAME}_lib PUBLIC
     "${KISSFFT_DIR}"
 )
@@ -54,26 +55,30 @@ set_target_properties(${PROJECT_NAME}_lib PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
-if (MSVC)
+if(MSVC)
     target_compile_options(${PROJECT_NAME}_lib PRIVATE /W4)
 else()
-    #target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -Wextra -pedantic -Werror -g)
     target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -g)
 endif()
 
-target_link_libraries(${PROJECT_NAME}_lib PUBLIC whisper)
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC
+    whisper
+    Boost::program_options
+)
 
 add_executable(${PROJECT_NAME} ${SRC_DIR}/main.cpp)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${PROJECT_NAME}_lib
     whisper
+    Boost::program_options
 )
 
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
 
@@ -83,6 +88,7 @@ add_subdirectory(${GTEST_DIR} ${CMAKE_BINARY_DIR}/googletest EXCLUDE_FROM_ALL)
 enable_testing()
 
 add_executable(${PROJECT_NAME}_tests ${TEST_FILES})
+
 target_include_directories(${PROJECT_NAME}_tests PRIVATE
     ${INC_DIR}
     ${GTEST_DIR}/googletest/include
@@ -96,11 +102,11 @@ target_link_libraries(${PROJECT_NAME}_tests PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME}_tests PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
 
-if (MSVC)
+if(MSVC)
     target_compile_options(${PROJECT_NAME}_tests PRIVATE /W4)
 else()
     target_compile_options(${PROJECT_NAME}_tests PRIVATE -Wall -Wextra -pedantic -Werror -O3 -march=native -g)
@@ -115,11 +121,9 @@ set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(CPACK_PACKAGE_CONTACT vasuyan4ik@gmail.com)
-
 include(CPack)
 
 # clean target
-
 add_custom_target(clean-all
     COMMAND ${CMAKE_COMMAND} -E rm -rf
         ${CMAKE_BINARY_DIR}/CMakeCache.txt
@@ -131,5 +135,5 @@ add_custom_target(clean-all
         ${CMAKE_BINARY_DIR}/_CPack_Packages
         ${CMAKE_BINARY_DIR}/googletest
         ${CMAKE_BINARY_DIR}/whisper_build
-    COMMAND ${CMAKE_COMMAND} -E echo "Full clean done"
+    COMMAND ${CMAKE_COMMAND} -E echo "full clean done"
 )
