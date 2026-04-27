@@ -1,5 +1,6 @@
 #include "segment_eraser.h"
 #include "utils.h"
+#include <algorithm>
 
 std::vector<float> segment_eraser::erase(const std::vector<float>& in, const std::vector<cut_range>& cuts)
 {
@@ -18,6 +19,10 @@ std::vector<float> segment_eraser::erase(const std::vector<float>& in, const std
     // build list of "keep" intervals (complement of cuts)
     std::vector<std::pair<size_t,size_t>> keep_ranges;
     size_t cursor = 0;
+
+    std::sort(cuts.begin(), cuts.end(), [](const cut_range &r1, const cut_range &r2) -> bool {
+        return r1.start_s < r2.start_s;
+    });
 
     for (const auto& cut : cuts) {
         size_t cut_start = clamp_sample(cut.start_s, in.size());
