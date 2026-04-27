@@ -168,11 +168,19 @@ TEST(SegmentEraserTest, ErasesSingleSegment) {
     segment_eraser eraser;
     auto result = eraser.erase(pcm, cuts);
 
-    EXPECT_LT(result.size(), pcm.size());
+    const size_t expected_size = 8000;
+
+    EXPECT_EQ(result.size(), expected_size);
+    EXPECT_FLOAT_EQ(result.front(), 0.5f);
+    EXPECT_FLOAT_EQ(result.back(), 0.5f);
+    EXPECT_TRUE(std::all_of(result.begin(), result.end(), [](float v) { return v == 0.5f; }));
 }
 
 TEST(SegmentEraserTest, ErasesMultipleSegments) {
-    std::vector<float> pcm(32000, 0.5f);
+    std::vector<float> pcm(32000);
+    for (size_t i = 0; i < pcm.size(); ++i) {
+        pcm[i] = static_cast<float>(i);
+    }
     std::vector<cut_range> cuts = {
         {0.3f, 0.6f},
         {1.0f, 1.3f}
@@ -181,26 +189,36 @@ TEST(SegmentEraserTest, ErasesMultipleSegments) {
     segment_eraser eraser;
     auto result = eraser.erase(pcm, cuts);
 
-    EXPECT_LT(result.size(), pcm.size());
+    const size_t expected_size = 22400;
+    const size_t fade_samples = static_cast<size_t>(FADE_DURATION_S * SAMPLE_RATE);
+
+    EXPECT_EQ(result.size(), expected_size);
+    EXPECT_FLOAT_EQ(result[0], 0.0f);
+    EXPECT_FLOAT_EQ(result[4399], 4399.0f);
+    EXPECT_NEAR(result[4800], 0.0f, 1e-6f);
+    EXPECT_NEAR(result[4800 + fade_samples - 1], static_cast<float>(fade_samples - 1) / fade_samples, 1e-6f);
 }
 
 TEST(SegmentEraserTest, AppliesFadeInToNonFirstSegment) {
-    // create audio with multiple segments to cut
-    std::vector<float> pcm(48000, 1.0f);  // 3 seconds of audio
+    std::vector<float> pcm(48000);
+    for (size_t i = 0; i < pcm.size(); ++i) {
+        pcm[i] = static_cast<float>(i) / static_cast<float>(pcm.size());
+    }
     std::vector<cut_range> cuts = {
-        {0.5f, 1.0f}  // Cut first 0.5 seconds of middle section
+        {0.5f, 1.0f}
     };
 
     segment_eraser eraser;
     auto result = eraser.erase(pcm, cuts);
 
-    // after cut, remain audio should show fading
-    EXPECT_LT(result.size(), pcm.size());
-    if (result.size() > 1000) {
-        // fade-in will be applied to the second segment (after the cut)
-        // check that some fading was applied (values increase from near-zero)
-        EXPECT_GE(result[0], 0.0f);
-    }
+    const size_t expected_size = 40000;
+    const size_t fade_samples = static_cast<size_t>(FADE_DURATION_S * SAMPLE_RATE);
+
+    EXPECT_EQ(result.size(), expected_size);
+    EXPECT_NEAR(result[7999], 0.0f, 1e-6f);
+    EXPECT_NEAR(result[8000], 0.0f, 1e-6f);
+    EXPECT_GT(result[8001], result[8000]);
+    EXPECT_NEAR(result[8000 + fade_samples - 1], static_cast<float>(fade_samples - 1) / fade_samples, 1e-6f);
 }
 
 TEST(SegmentEraserTest, ErasesFromStart) {

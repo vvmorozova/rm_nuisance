@@ -1,6 +1,7 @@
 #include "nuisance_detector.h"
 #include "utils.h"
 #include "storage.h"
+#include <algorithm>
 #include <cmath>
 #include "kiss_fft.h"
 
@@ -51,12 +52,17 @@ std::vector<cut_range> nuisance_detector::detect(
         }
     }
 
-    // detect silence directly from pcm — whisper often hallucinates text over silent regions
+    // detect long pauses based on segment timing and PCM silence
     if (!is_type_disabled(nuisance_type::pauses)) {
-        auto silence_cuts = detect_silence_from_pcm(pcm, SILENCE_THRESHOLD, MIN_SILENCE_S, 0.15f);
-        for (const auto& r : silence_cuts)
+        auto segment_silence = detect_silence_from_segments(segs, total_samples, MIN_SILENCE_S, 0.15f);
+        for (const auto& r : segment_silence)
+            details.emplace_back(nuisance_type_name(nuisance_type::pauses), r, "segment pause");
+        cuts.insert(cuts.end(), segment_silence.begin(), segment_silence.end());
+
+        auto pcm_silence = detect_silence_from_pcm(pcm, SILENCE_THRESHOLD, MIN_SILENCE_S, 0.15f);
+        for (const auto& r : pcm_silence)
             details.emplace_back(nuisance_type_name(nuisance_type::pauses), r, "pcm silence");
-        cuts.insert(cuts.end(), silence_cuts.begin(), silence_cuts.end());
+        cuts.insert(cuts.end(), pcm_silence.begin(), pcm_silence.end());
     }
 
     // detect clicks (sharp amplitude spikes)
@@ -150,6 +156,56 @@ std::vector<cut_range> nuisance_detector::detect_silence_from_pcm(
     // handle trailing silence
     if (silence_start >= 0)
         try_add_cut(silence_start, static_cast<int>(is_silent.size()));
+
+    return cuts;
+}
+
+std::vector<cut_range> nuisance_detector::detect_silence_from_segments(
+    const std::vector<segment>& segs,
+    size_t total_samples,
+    float min_silence_s,
+    float keep_pad_s)
+{
+    std::vector<cut_range> cuts;
+    if (segs.empty())
+        return cuts;
+
+    std::vector<segment> sorted_segs = segs;
+    std::sort(sorted_segs.begin(), sorted_segs.end(),
+        [](const segment& a, const segment& b) {
+            return a.start_s < b.start_s;
+        });
+
+    const float total_duration = static_cast<float>(total_samples) / SAMPLE_RATE;
+
+    auto try_add_cut = [&](float start_s, float end_s) {
+        float cut_s = std::max(0.0f, start_s + keep_pad_s);
+        float cut_e = std::min(total_duration, end_s - keep_pad_s);
+        if (cut_e > cut_s + 0.1f) {
+            cuts.push_back({cut_s, cut_e});
+            utils::log("detector: [segment pause] " + ts(cut_s) + " – " + ts(cut_e) +
+                " (" + std::to_string(cut_e - cut_s) + " s)");
+        }
+    };
+
+    const segment& first_seg = sorted_segs.front();
+    if (first_seg.start_s > min_silence_s) {
+        try_add_cut(0.0f, first_seg.start_s);
+    }
+
+    for (size_t i = 1; i < sorted_segs.size(); ++i) {
+        const segment& prev = sorted_segs[i - 1];
+        const segment& cur = sorted_segs[i];
+        float gap = cur.start_s - prev.end_s;
+        if (gap > min_silence_s) {
+            try_add_cut(prev.end_s, cur.start_s);
+        }
+    }
+
+    const segment& last_seg = sorted_segs.back();
+    if (total_duration - last_seg.end_s > min_silence_s) {
+        try_add_cut(last_seg.end_s, total_duration);
+    }
 
     return cuts;
 }

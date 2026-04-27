@@ -34,7 +34,7 @@ config cmd_args_parcer::parse(int argc, char* argv[]) {
         ("help,h",                                                        "show help")
         ("input,i",    po::value<std::vector<std::string>>()->multitoken(), "input files")
         ("output,o",   po::value<std::vector<std::string>>()->multitoken(), "output files")
-        ("disable-type", po::value<std::vector<std::string>>()->multitoken(), "disable nuisance type")
+        ("disable-type", po::value<std::vector<std::string>>()->composing(), "disable nuisance type")
         ("model,m",    po::value<std::string>(),                           "model path");
 
     // collect positional args into --input
