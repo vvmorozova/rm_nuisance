@@ -61,8 +61,7 @@ std::vector<float> segment_eraser::erase(const std::vector<float>& in, std::vect
         }
 
         // fade-out at the end of every keep segment (except the very last)
-        if (ki + 1 < keep_ranges.size())
-        {
+        if (ki + 1 < keep_ranges.size()) {
             apply_fade_out(it_begin, it_end, fade_samples);
         }
 
@@ -82,26 +81,28 @@ size_t segment_eraser::clamp_sample(float t, size_t max_sz) {
     if (n < 0) {
         n = 0;
     }
-    if (static_cast<size_t>(n) > max_sz)
-    {
+    if (static_cast<size_t>(n) > max_sz) {
         n = static_cast<long long>(max_sz);
     }
     return static_cast<size_t>(n);
 }
 
-void segment_eraser::apply_fade_in(std::vector<float>::iterator& it_begin, 
-                                    std::vector<float>::iterator& it_end, int n) {
-    int len = std::min(n, static_cast<int>(std::distance(it_begin, it_end)));
+void segment_eraser::apply_fade_in(std::vector<float>::iterator& it_begin,
+    std::vector<float>::iterator& it_end, int n)
+{
+    int len = std::min(n, static_cast<int>(std::distance(it_begin, it_end)) / 2);
     for (int i = 0; i < len; ++i) {
-        *std::next(it_begin, i) = static_cast<float>(i) / len;
+        *std::next(it_begin, i) *= static_cast<float>(i) / len;
     }
 }
 
-void segment_eraser::apply_fade_out(std::vector<float>::iterator& it_begin, 
-                                    std::vector<float>::iterator& it_end, int n) {
+void segment_eraser::apply_fade_out(std::vector<float>::iterator& it_begin,
+    std::vector<float>::iterator& it_end, int n)
+{
     int total = static_cast<int>(std::distance(it_begin, it_end));
-    int start = std::max(0, total - n);
+    int len   = std::min(n, total / 2);
+    int start = total - len;
     for (int i = start; i < total; ++i) {
-        *std::next(it_begin, i) = static_cast<float>(total - 1 - i) / n;
+        *std::next(it_begin, i) *= static_cast<float>(total - 1 - i) / len;
     }
 }
